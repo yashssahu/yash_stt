@@ -7,17 +7,23 @@
   <style>
     :root { --transcript-font-size: 18px; }
     body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f4f6fb; color: #1f2937; }
-    .container { max-width: 1100px; margin: 0 auto; padding: 20px; background: #ffffff; border-radius: 12px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06); }
+    .container { width: calc(100% - 48px); max-width: none; margin: 0 auto; padding: 12px; background: #ffffff; border-radius: 8px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06); }
     .app { display: flex; gap: 32px; align-items: flex-start; }
-    .left { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .left { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
     .right { flex: 0 0 340px; border-left: 1px solid #e6e9ef; padding-left: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
+    .splitter { width: 10px; cursor: col-resize; background: transparent; align-self: stretch; }
+    .splitter:hover { background: rgba(15,23,42,0.03); }
+    .v-resizer { position: absolute; right: 0; top: 0; width: 18px; height: 100%; cursor: col-resize; z-index: 120; }
+    .v-resizer:hover { background: rgba(15,23,42,0.03); }
+    .h-resizer { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; cursor: ns-resize; z-index: 120; }
+    .h-resizer:hover { background: rgba(15,23,42,0.03); }
     .buttons { display: flex; flex-direction: column; gap: 12px; }
     .brand-heading { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #111827; margin-bottom: 10px; }
     button { padding: 12px 14px; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; }
     button.start { background: #2563eb; color: white; }
     button.stop { background: #dc2626; color: white; }
     button.clear { background: #6b7280; color: white; }
-    .transcript { width: 100%; min-height: 420px; margin-top: 0; padding: 24px; border-radius: 10px; border: 1px solid #d1d5db; resize: vertical; overflow: auto; line-height: 1.6; font-size: var(--transcript-font-size); font-weight: 600; background: #fbfdff; cursor: text; }
+    .transcript { width: 100%; min-height: 120px; margin-top: 0; padding: 24px; border-radius: 10px; border: 1px solid #d1d5db; resize: vertical; overflow: auto; line-height: 1.6; font-size: var(--transcript-font-size); font-weight: 600; background: #fbfdff; cursor: text; max-height: 92vh; }
     .status { margin-top: 8px; font-size: 0.95rem; color: #374151; }
     .note { margin-top: 18px; color: #374151; font-size: 0.95rem; }
     .warning { color: #991b1b; }
@@ -31,7 +37,11 @@
     <div class="app">
       <div class="left">
         <textarea id="transcript" class="transcript" placeholder="Speech will appear here..."></textarea>
+        <div class="v-resizer" id="vResizer" title="Drag to resize horizontally"></div>
+        <div class="h-resizer" id="hResizer" title="Drag to resize vertically"></div>
       </div>
+
+      <div id="splitter" class="splitter" title="Drag to resize"></div>
 
       <aside class="right">
         <div class="brand-heading">Yash Technologies</div>
@@ -51,8 +61,8 @@
         </div>
 
         <div class="setting-row">
-          <div><strong>Recognition</strong></div>
-          <div class="small">Uses Chrome Web Speech API</div>
+          <div><strong>Web Speech API</strong></div>
+          <div class="small">Developed by Yash Shekhar</div>
         </div>
         <div class="setting-row">
           <div><strong>Status</strong></div>
@@ -181,6 +191,95 @@
     fontResetBtn.addEventListener('click', () => setFontSize(18));
     // initialize display
     setFontSize(fontSize);
+
+    // Splitter: allow horizontal resize by dragging the vertical splitter
+    (function() {
+      const splitter = document.getElementById('splitter');
+      const container = document.querySelector('.container');
+      const leftPane = document.querySelector('.left');
+      let isResizing = false;
+
+      splitter.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const rect = container.getBoundingClientRect();
+        let newWidth = e.clientX - rect.left;
+        const minLeft = 240; // minimum left pane width in px
+        const rightMin = 260; // minimum right pane width to keep buttons visible
+        const splitterW = 10;
+        const max = rect.width - rightMin - splitterW;
+        if (newWidth < minLeft) newWidth = minLeft;
+        if (newWidth > max) newWidth = max;
+        leftPane.style.flex = '0 0 ' + newWidth + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    })();
+
+    // Vertical and horizontal resizers on the left pane edges (allow dragging anywhere along edges)
+    (function(){
+      const container = document.querySelector('.container');
+      const leftPane = document.querySelector('.left');
+      const vResizer = document.getElementById('vResizer');
+      const hResizer = document.getElementById('hResizer');
+      const transcript = document.getElementById('transcript');
+      let isV = false, isH = false;
+
+      vResizer.addEventListener('mousedown', (e) => {
+        isV = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      hResizer.addEventListener('mousedown', (e) => {
+        isH = true;
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        const rect = container.getBoundingClientRect();
+        if (isV) {
+          let newWidth = e.clientX - rect.left;
+          const minLeft = 240;
+          const rightMin = 260;
+          const splitterW = 10;
+          const max = rect.width - rightMin - splitterW;
+          if (newWidth < minLeft) newWidth = minLeft;
+          if (newWidth > max) newWidth = max;
+          leftPane.style.flex = '0 0 ' + newWidth + 'px';
+        }
+        if (isH) {
+          const top = transcript.getBoundingClientRect().top;
+          let newHeight = e.clientY - top;
+          const minH = 120;
+          // maxH should allow expanding to the bottom of the viewport (page end)
+          const maxH = window.innerHeight - top - 20; 
+          if (newHeight < minH) newHeight = minH;
+          if (newHeight > maxH) newHeight = maxH;
+          transcript.style.height = newHeight + 'px';
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isV || isH) {
+          isV = false; isH = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+        }
+      });
+    })();
   </script>
 </body>
 </html>
