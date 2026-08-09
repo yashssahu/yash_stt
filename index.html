@@ -3,283 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Real-Time Speech to Text</title>
+  <title>Login - Speech to Text</title>
   <style>
-    :root { --transcript-font-size: 18px; }
-    body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f4f6fb; color: #1f2937; }
-    .container { width: calc(100% - 48px); max-width: none; margin: 0 auto; padding: 12px; background: #ffffff; border-radius: 8px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06); }
-    .app { display: flex; gap: 32px; align-items: flex-start; }
-    .left { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-    .right { flex: 0 0 340px; border-left: 1px solid #e6e9ef; padding-left: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; }
-    .splitter { width: 10px; cursor: col-resize; background: transparent; align-self: stretch; }
-    .splitter:hover { background: rgba(15,23,42,0.03); }
-    .v-resizer { position: absolute; right: 0; top: 0; width: 18px; height: 100%; cursor: col-resize; z-index: 120; }
-    .v-resizer:hover { background: rgba(15,23,42,0.03); }
-    .h-resizer { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; cursor: ns-resize; z-index: 120; }
-    .h-resizer:hover { background: rgba(15,23,42,0.03); }
-    .buttons { display: flex; flex-direction: column; gap: 12px; }
-    .brand-heading { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #111827; margin-bottom: 10px; }
-    button { padding: 12px 14px; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; }
-    button.start { background: #2563eb; color: white; }
-    button.stop { background: #dc2626; color: white; }
-    button.clear { background: #6b7280; color: white; }
-    .transcript { width: 100%; min-height: 120px; margin-top: 0; padding: 24px; border-radius: 10px; border: 1px solid #d1d5db; resize: vertical; overflow: auto; line-height: 1.6; font-size: var(--transcript-font-size); font-weight: 600; background: #fbfdff; cursor: text; max-height: 92vh; }
-    .status { margin-top: 8px; font-size: 0.95rem; color: #374151; }
-    .note { margin-top: 18px; color: #374151; font-size: 0.95rem; }
-    .warning { color: #991b1b; }
-    .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .font-size-display { font-weight: 600; }
-    .small { font-size: 0.9rem; color: #4b5563; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; background: #eef2ff; color: #111827; }
+    .card { width: min(420px, calc(100% - 32px)); background: white; border-radius: 18px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16); padding: 32px; }
+    h1 { margin: 0 0 10px; font-size: 1.8rem; }
+    p { margin: 0 0 24px; color: #475569; line-height: 1.6; }
+    label { display: block; margin-bottom: 16px; font-weight: 600; }
+    input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 1rem; box-sizing: border-box; }
+    button { width: 100%; margin-top: 10px; padding: 14px 16px; border: none; border-radius: 12px; background: #2563eb; color: white; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .error { margin-top: 16px; color: #b91c1c; font-weight: 600; min-height: 24px; }
+    .hint { margin-top: 20px; color: #475569; font-size: 0.94rem; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="app">
-      <div class="left">
-        <textarea id="transcript" class="transcript" placeholder="Speech will appear here..."></textarea>
-        <div class="v-resizer" id="vResizer" title="Drag to resize horizontally"></div>
-        <div class="h-resizer" id="hResizer" title="Drag to resize vertically"></div>
-      </div>
+  <div class="card">
+    <h1>Yash Technologies</h1>
+    <p>Enter your username and password to continue to the speech-to-text page.</p>
 
-      <div id="splitter" class="splitter" title="Drag to resize"></div>
+    <label>
+      Username
+      <input id="username" type="text" autocomplete="username" placeholder="Enter username" />
+    </label>
 
-      <aside class="right">
-        <div class="brand-heading">Yash Technologies</div>
-        <div class="buttons">
-          <button class="start" id="startBtn">Start</button>
-          <button class="stop" id="stopBtn" disabled>Stop</button>
-          <button class="clear" id="clearBtn">Clear</button>
-        </div>
-        <div class="setting-row">
-          <div><strong>Text Size</strong></div>
-          <div class="font-size-display" id="fontSizeDisplay">18px</div>
-        </div>
-        <div style="display:flex; gap:8px; margin-bottom: 10px;">
-          <button id="fontDecBtn">−</button>
-          <button id="fontIncBtn">+</button>
-          <button id="fontResetBtn">Reset</button>
-        </div>
+    <label>
+      Password
+      <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" />
+    </label>
 
-        <div class="setting-row">
-          <div><strong>Web Speech API</strong></div>
-          <div class="small">Developed by Yash Shekhar</div>
-        </div>
-        <div class="setting-row">
-          <div><strong>Status</strong></div>
-          <div class="small" id="status">ready</div>
-        </div>
-        <div style="margin-top:18px" class="note">
-          <p class="small">Allow microphone access when prompted. Use the plus/minus to adjust displayed text size.</p>
-        </div>
-      </aside>
-    </div>
+    <button id="loginBtn">Login</button>
+    <div class="error" id="errorMessage"></div>
+    <div class="hint">Developed by Yash Technologies pvt. ltd.</div>
   </div>
 
   <script>
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const transcriptArea = document.getElementById('transcript');
-    const statusField = document.getElementById('status');
-    const fontIncBtn = document.getElementById('fontIncBtn');
-    const fontDecBtn = document.getElementById('fontDecBtn');
-    const fontResetBtn = document.getElementById('fontResetBtn');
-    const fontSizeDisplay = document.getElementById('fontSizeDisplay');
+    const LOGIN_REDIRECT = 'index.html';
+    const validUsers = [
+      { username: 'yash', password: 'pass@123' },
+      { username: 'yash2', password: 'pass@456' },
+      { username: 'yash3', password: 'pass@789' },
+      { username: 'yash4', password: 'pass@000' }
+    ];
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      statusField.textContent = 'Status: browser does not support Web Speech API. Use Chrome or Edge Chromium.';
-      startBtn.disabled = true;
-      stopBtn.disabled = true;
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function showError(message) {
+      errorMessage.textContent = message;
     }
 
-    let recognition;
-    let isListening = false;
-    let autoRestart = false; // when true, restart recognition automatically on end
+    function authenticate() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
 
-    function updateStatus(text) {
-      statusField.textContent = 'Status: ' + text;
+      if (!username || !password) {
+        showError('Please enter both username and password.');
+        return;
+      }
+
+      const found = validUsers.some(user => user.username === username && user.password === password);
+      if (found) {
+        sessionStorage.setItem('speechToTextLoggedIn', 'true');
+        window.location.href = LOGIN_REDIRECT;
+      } else {
+        showError('Incorrect username or password. Please try again.');
+      }
     }
 
-    function createRecognition() {
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        isListening = true;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        updateStatus('listening');
-      };
-
-      recognition.onresult = (event) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const t = event.results[i][0].transcript;
-          if (event.results[i].isFinal) finalTranscript += t;
-          else interimTranscript += t;
-        }
-
-        // Remove previous interim marker, keep final text
-        transcriptArea.value = transcriptArea.value.replace(/\n?\[listening...\].*$/, '').trim();
-        if (finalTranscript) transcriptArea.value += (transcriptArea.value ? '\n' : '') + finalTranscript + '\n';
-        if (interimTranscript) transcriptArea.value += '[listening...] ' + interimTranscript;
-        transcriptArea.scrollTop = transcriptArea.scrollHeight;
-      };
-
-      recognition.onerror = (event) => {
-        // If permission/service is denied, stop auto-restart to avoid loops
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          autoRestart = false;
-        }
-        updateStatus('error: ' + event.error);
-      };
-
-      recognition.onend = () => {
-        isListening = false;
-        // If autoRestart is enabled, restart automatically; otherwise update UI to stopped state
-        if (autoRestart) {
-          // small delay to avoid rapid restart loops
-          setTimeout(() => {
-            try {
-              // recreate recognition to ensure fresh state
-              createRecognition();
-              recognition.start();
-            } catch (err) {
-              autoRestart = false;
-              startBtn.disabled = false;
-              stopBtn.disabled = true;
-              updateStatus('restart failed: ' + (err && err.message ? err.message : err));
-            }
-          }, 250);
-        } else {
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
-          updateStatus('stopped');
-        }
-      };
-    }
-
-    startBtn.addEventListener('click', () => {
-      if (!SpeechRecognition) return;
-      autoRestart = true; // enable automatic restart until user stops
-      if (!recognition) createRecognition();
-      transcriptArea.value = transcriptArea.value.replace(/\n?\[listening...\].*$/, '').trim();
-      try { recognition.start(); } catch (error) { updateStatus('cannot start recognition: ' + error.message); }
-    });
-
-    stopBtn.addEventListener('click', () => {
-      // user-requested stop: disable auto-restart and stop recognition
-      autoRestart = false;
-      if (recognition && isListening) recognition.stop();
-    });
-    clearBtn.addEventListener('click', () => { transcriptArea.value = ''; });
-
-    // Font size controls
-    let fontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 18;
-    function setFontSize(size) {
-      size = Math.min(48, Math.max(12, size));
-      fontSize = size;
-      transcriptArea.style.fontSize = size + 'px';
-      fontSizeDisplay.textContent = size + 'px';
-    }
-    fontIncBtn.addEventListener('click', () => setFontSize(fontSize + 2));
-    fontDecBtn.addEventListener('click', () => setFontSize(fontSize - 2));
-    fontResetBtn.addEventListener('click', () => setFontSize(18));
-    // initialize display
-    setFontSize(fontSize);
-
-    // Splitter: allow horizontal resize by dragging the vertical splitter
-    (function() {
-      const splitter = document.getElementById('splitter');
-      const container = document.querySelector('.container');
-      const leftPane = document.querySelector('.left');
-      let isResizing = false;
-
-      splitter.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-      });
-
-      document.addEventListener('mousemove', (e) => {
-        if (!isResizing) return;
-        const rect = container.getBoundingClientRect();
-        let newWidth = e.clientX - rect.left;
-        const minLeft = 240; // minimum left pane width in px
-        const rightMin = 260; // minimum right pane width to keep buttons visible
-        const splitterW = 10;
-        const max = rect.width - rightMin - splitterW;
-        if (newWidth < minLeft) newWidth = minLeft;
-        if (newWidth > max) newWidth = max;
-        leftPane.style.flex = '0 0 ' + newWidth + 'px';
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (isResizing) {
-          isResizing = false;
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-        }
-      });
-    })();
-
-    // Vertical and horizontal resizers on the left pane edges (allow dragging anywhere along edges)
-    (function(){
-      const container = document.querySelector('.container');
-      const leftPane = document.querySelector('.left');
-      const vResizer = document.getElementById('vResizer');
-      const hResizer = document.getElementById('hResizer');
-      const transcript = document.getElementById('transcript');
-      let isV = false, isH = false;
-
-      vResizer.addEventListener('mousedown', (e) => {
-        isV = true;
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-      });
-
-      hResizer.addEventListener('mousedown', (e) => {
-        isH = true;
-        document.body.style.cursor = 'ns-resize';
-        document.body.style.userSelect = 'none';
-      });
-
-      document.addEventListener('mousemove', (e) => {
-        const rect = container.getBoundingClientRect();
-        if (isV) {
-          let newWidth = e.clientX - rect.left;
-          const minLeft = 240;
-          const rightMin = 260;
-          const splitterW = 10;
-          const max = rect.width - rightMin - splitterW;
-          if (newWidth < minLeft) newWidth = minLeft;
-          if (newWidth > max) newWidth = max;
-          leftPane.style.flex = '0 0 ' + newWidth + 'px';
-        }
-        if (isH) {
-          const top = transcript.getBoundingClientRect().top;
-          let newHeight = e.clientY - top;
-          const minH = 120;
-          // maxH should allow expanding to the bottom of the viewport (page end)
-          const maxH = window.innerHeight - top - 20; 
-          if (newHeight < minH) newHeight = minH;
-          if (newHeight > maxH) newHeight = maxH;
-          transcript.style.height = newHeight + 'px';
-        }
-      });
-
-      document.addEventListener('mouseup', () => {
-        if (isV || isH) {
-          isV = false; isH = false;
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-        }
-      });
-    })();
+    loginBtn.addEventListener('click', authenticate);
+    usernameInput.addEventListener('keydown', event => { if (event.key === 'Enter') authenticate(); });
+    passwordInput.addEventListener('keydown', event => { if (event.key === 'Enter') authenticate(); });
   </script>
 </body>
 </html>
