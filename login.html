@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Speech to Text</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; background: #eef2ff; color: #111827; }
+    .card { width: min(420px, calc(100% - 32px)); background: white; border-radius: 18px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16); padding: 32px; }
+    h1 { margin: 0 0 10px; font-size: 1.8rem; }
+    p { margin: 0 0 24px; color: #475569; line-height: 1.6; }
+    label { display: block; margin-bottom: 16px; font-weight: 600; }
+    input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #cbd5e1; font-size: 1rem; box-sizing: border-box; }
+    button { width: 100%; margin-top: 10px; padding: 14px 16px; border: none; border-radius: 12px; background: #2563eb; color: white; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .error { margin-top: 16px; color: #b91c1c; font-weight: 600; min-height: 24px; }
+    .hint { margin-top: 20px; color: #475569; font-size: 0.94rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Yash Technologies</h1>
+    <p>Enter your username and password to continue to the speech-to-text page.</p>
+
+    <label>
+      Username
+      <input id="username" type="text" autocomplete="username" placeholder="Enter username" />
+    </label>
+
+    <label>
+      Password
+      <input id="password" type="password" autocomplete="current-password" placeholder="Enter password" />
+    </label>
+
+    <button id="loginBtn">Login</button>
+    <div class="error" id="errorMessage"></div>
+    <div class="hint">Developed by Yash Technologies pvt. ltd.</div>
+  </div>
+
+  <script>
+    const LOGIN_REDIRECT = 'index.html';
+    const validUsers = [
+      { username: 'yash', password: 'pass@123' },
+      { username: 'yash2', password: 'pass@456' },
+      { username: 'yash3', password: 'pass@789' },
+      { username: 'yash4', password: 'pass@000' }
+    ];
+
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+    }
+
+    function authenticate() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!username || !password) {
+        showError('Please enter both username and password.');
+        return;
+      }
+
+      const found = validUsers.some(user => user.username === username && user.password === password);
+      if (found) {
+        sessionStorage.setItem('speechToTextLoggedIn', 'true');
+        window.location.href = LOGIN_REDIRECT;
+      } else {
+        showError('Incorrect username or password. Please try again.');
+      }
+    }
+
+    loginBtn.addEventListener('click', authenticate);
+    usernameInput.addEventListener('keydown', event => { if (event.key === 'Enter') authenticate(); });
+    passwordInput.addEventListener('keydown', event => { if (event.key === 'Enter') authenticate(); });
+  </script>
+</body>
+</html>
