@@ -96,6 +96,7 @@
     let recognition;
     let isListening = false;
     let autoRestart = false; // when true, restart recognition automatically on end
+    let committedTranscript = '';
 
     function updateStatus(text) {
       statusField.textContent = 'Status: ' + text;
@@ -123,10 +124,10 @@
           else interimTranscript += t;
         }
 
-        // Remove previous interim marker, keep final text
-        transcriptArea.value = transcriptArea.value.replace(/\n?\[listening...\].*$/, '').trim();
-        if (finalTranscript) transcriptArea.value += (transcriptArea.value ? '\n' : '') + finalTranscript + '\n';
-        if (interimTranscript) transcriptArea.value += '[listening...] ' + interimTranscript;
+        if (finalTranscript) {
+          committedTranscript += (committedTranscript ? '\n' : '') + finalTranscript.trim();
+        }
+        transcriptArea.value = committedTranscript + (interimTranscript ? '\n' + interimTranscript : '');
         transcriptArea.scrollTop = transcriptArea.scrollHeight;
       };
 
@@ -156,6 +157,7 @@
             }
           }, 250);
         } else {
+          transcriptArea.value = committedTranscript;
           startBtn.disabled = false;
           stopBtn.disabled = true;
           updateStatus('stopped');
@@ -167,7 +169,7 @@
       if (!SpeechRecognition) return;
       autoRestart = true; // enable automatic restart until user stops
       if (!recognition) createRecognition();
-      transcriptArea.value = transcriptArea.value.replace(/\n?\[listening...\].*$/, '').trim();
+      committedTranscript = transcriptArea.value.trim();
       try { recognition.start(); } catch (error) { updateStatus('cannot start recognition: ' + error.message); }
     });
 
@@ -176,7 +178,10 @@
       autoRestart = false;
       if (recognition && isListening) recognition.stop();
     });
-    clearBtn.addEventListener('click', () => { transcriptArea.value = ''; });
+    clearBtn.addEventListener('click', () => {
+      committedTranscript = '';
+      transcriptArea.value = '';
+    });
 
     // Font size controls
     let fontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--transcript-font-size')) || 18;
