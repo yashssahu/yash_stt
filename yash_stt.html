@@ -24,7 +24,13 @@
     button.stop { background: #dc2626; color: white; }
     button.clear { background: #6b7280; color: white; }
     .transcript { width: 100%; min-height: 120px; margin-top: 0; padding: 24px; border-radius: 10px; border: 1px solid #d1d5db; resize: vertical; overflow: auto; line-height: 1.6; font-size: var(--transcript-font-size); font-weight: 600; background: #fbfdff; cursor: text; max-height: 92vh; }
-    .status { margin-top: 8px; font-size: 0.95rem; color: #374151; }
+    .status { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 0.95rem; color: #4b5563; font-weight: 700; }
+    .status::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: #9ca3af; flex: 0 0 9px; }
+    .status.listening { color: #15803d; }
+    .status.listening::before { background: #16a34a; animation: status-pulse 1.2s ease-in-out infinite; }
+    .status.stopped, .status.error { color: #b91c1c; }
+    .status.stopped::before, .status.error::before { background: #dc2626; }
+    @keyframes status-pulse { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.35); } 50% { opacity: 0.45; box-shadow: 0 0 0 5px rgba(22, 163, 74, 0); } }
     .note { margin-top: 18px; color: #374151; font-size: 0.95rem; }
     .warning { color: #991b1b; }
     .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -66,7 +72,7 @@
         </div>
         <div class="setting-row">
           <div><strong>Status</strong></div>
-          <div class="small" id="status">ready</div>
+          <div class="status" id="status">Status: ready</div>
         </div>
         <div style="margin-top:18px" class="note">
           <p class="small">Allow microphone access when prompted. Use the plus/minus to adjust displayed text size.</p>
@@ -97,8 +103,16 @@
     let isListening = false;
     let autoRestart = false; // when true, restart recognition automatically on end
     let committedTranscript = '';
+    let interimTranscript = '';
+    let lastRenderedInterim = '';
+    let userEditedTranscript = false;
+    let restartTimer = null;
 
     function updateStatus(text) {
+      statusField.classList.remove('listening', 'stopped', 'error');
+      if (text === 'listening') statusField.classList.add('listening');
+      else if (text === 'stopped') statusField.classList.add('stopped');
+      else if (text.startsWith('error:')) statusField.classList.add('error');
       statusField.textContent = 'Status: ' + text;
     }
 
@@ -117,16 +131,25 @@
 
       recognition.onresult = (event) => {
         let finalTranscript = '';
-        let interimTranscript = '';
+        let nextInterimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
           const t = event.results[i][0].transcript;
           if (event.results[i].isFinal) finalTranscript += t;
-          else interimTranscript += t;
+          else nextInterimTranscript += t;
         }
 
         if (finalTranscript) {
-          committedTranscript += (committedTranscript ? '\n' : '') + finalTranscript.trim();
+          const trimmedFinal = finalTranscript.trim();
+          // If the user edited while an interim result was visible, replace only
+          // that old interim tail and leave edits elsewhere untouched.
+          if (userEditedTranscript && lastRenderedInterim && committedTranscript.endsWith(lastRenderedInterim)) {
+            committedTranscript = committedTranscript.slice(0, -lastRenderedInterim.length).trimEnd();
+          }
+          committedTranscript += (committedTranscript ? '\n' : '') + trimmedFinal;
+          userEditedTranscript = false;
         }
+        interimTranscript = nextInterimTranscript;
+        lastRenderedInterim = interimTranscript;
         transcriptArea.value = committedTranscript + (interimTranscript ? '\n' + interimTranscript : '');
         transcriptArea.scrollTop = transcriptArea.scrollHeight;
       };
@@ -144,7 +167,9 @@
         // If autoRestart is enabled, restart automatically; otherwise update UI to stopped state
         if (autoRestart) {
           // small delay to avoid rapid restart loops
-          setTimeout(() => {
+          restartTimer = setTimeout(() => {
+            restartTimer = null;
+            if (!autoRestart) return;
             try {
               // recreate recognition to ensure fresh state
               createRecognition();
@@ -168,6 +193,9 @@
     startBtn.addEventListener('click', () => {
       if (!SpeechRecognition) return;
       autoRestart = true; // enable automatic restart until user stops
+      userEditedTranscript = false;
+      interimTranscript = '';
+      lastRenderedInterim = '';
       if (!recognition) createRecognition();
       committedTranscript = transcriptArea.value.trim();
       try { recognition.start(); } catch (error) { updateStatus('cannot start recognition: ' + error.message); }
@@ -176,9 +204,22 @@
     stopBtn.addEventListener('click', () => {
       // user-requested stop: disable auto-restart and stop recognition
       autoRestart = false;
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = null;
+      }
       if (recognition && isListening) recognition.stop();
     });
+    transcriptArea.addEventListener('input', () => {
+      // Manual edits are the source of truth and must survive later results.
+      committedTranscript = transcriptArea.value;
+      userEditedTranscript = isListening;
+      interimTranscript = '';
+    });
     clearBtn.addEventListener('click', () => {
+      userEditedTranscript = false;
+      interimTranscript = '';
+      lastRenderedInterim = '';
       committedTranscript = '';
       transcriptArea.value = '';
     });
